@@ -2,6 +2,7 @@ package eu.webdude.homesurveillance;
 
 import com.hopding.jrpicam.RPiCamera;
 import com.hopding.jrpicam.exceptions.FailedToRunRaspistillException;
+import eu.webdude.homesurveillance.motiondetection.MotionDetectionAlgorithm;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -16,7 +17,7 @@ public class App {
 
     public static void main(String[] args) {
         try {
-            startSurveillance();
+            startSurveillance(new MotionDetectionAlgorithm(10, 20));
         } catch (FailedToRunRaspistillException e) {
             logger.log(Level.SEVERE, "Unable to find the raspberryPy camera!");
         } catch (InterruptedException | IOException e) {
@@ -24,9 +25,20 @@ public class App {
         }
     }
 
-    private static void startSurveillance() throws FailedToRunRaspistillException, IOException, InterruptedException {
+    private static void startSurveillance(MotionDetectionAlgorithm motionDetectionAlgorithm) throws FailedToRunRaspistillException, IOException, InterruptedException {
         logger.log(Level.INFO, "Starting camera");
         piCamera = new RPiCamera("/home/pi/Pictures/");
+        piCamera.takeStill("bafMamu");
         BufferedImage image = piCamera.takeBufferedStill();
+
+        while (true) {
+            Thread.sleep(1000);
+            BufferedImage imageTwo = piCamera.takeBufferedStill();
+            boolean detected = motionDetectionAlgorithm.detect(image, imageTwo);
+            if (detected) {
+                logger.log(Level.WARNING, "Motion has been detected");
+            }
+            image = imageTwo;
+        }
     }
 }
